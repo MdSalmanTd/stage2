@@ -3,7 +3,17 @@
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { api } from "~/trpc/react";
 import { useState } from "react";
-import { Skeleton } from "~/components/ui/skeleton";
+import { TransactionSkeletonCard } from "./TransactionSkeletonCard";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "~/components/ui/pagination";
+
 
 const DEFAULT_PUBKEY =
   "GCMTJCWDCE6AVBJMFCYIIPSLISCOTG3W62MMYKQOWBC2M4SJ65DEMUYK";
@@ -11,11 +21,21 @@ const DEFAULT_PUBKEY =
 export function TransactionList() {
   const [pubKeyInput, setPubKeyInput] = useState(DEFAULT_PUBKEY);
   const [connectedPubKey, setConnectedPubKey] = useState<string | null>(null);
+  const [cursor, setCursor] = useState<string | undefined>(undefined);
+  const [cursorHistory, setCursorHistory] = useState<(string | undefined)[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const limit = 20;
 
   const { data, isLoading, error } = api.transaction.getAll.useQuery(
-    { publicKey: connectedPubKey! },
+    { 
+      publicKey: connectedPubKey!,
+      cursor,
+      limit,
+    },
     { enabled: !!connectedPubKey },
   );
+
+
 
   const { data: accountData, isLoading: isLoadingAccount } =
     api.transaction.getAcc.useQuery(
@@ -26,8 +46,33 @@ export function TransactionList() {
   const handleConnect = () => {
     if (pubKeyInput.trim()) {
       setConnectedPubKey(pubKeyInput.trim());
+      // Reset pagination state on new connection
+      setCursor(undefined);
+      setCursorHistory([]);
+      setCurrentPage(1);
     }
   };
+
+  const handleNextPage = () => {
+    if (data?.nextCursor) {
+      setCursorHistory([...cursorHistory, cursor]);
+      setCursor(data.nextCursor);
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (cursorHistory.length > 0) {
+      const newHistory = [...cursorHistory];
+      const prevCursor = newHistory.pop();
+      setCursorHistory(newHistory);
+      setCursor(prevCursor);
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const hasPrevPage = currentPage > 1;
+  const hasNextPage = data?.hasMore ?? false;
 
   return (
     <div className="space-y-6">
@@ -59,134 +104,10 @@ export function TransactionList() {
       )}
 
       {connectedPubKey && isLoading && (
-        // <div className="text-center py-12">Loading transactions...</div>
-        <div className="space-y-6">
-        <Card className="cursor-pointer transition-shadow hover:shadow-md">
-          <CardHeader>
-            <CardTitle className="font-mono text-sm">
-              <Skeleton className="h-4 w-2/3" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground"><Skeleton className="h-4 w-[100px]" /></span>
-                <span className="font-semibold">
-                  {" "}
-                  <Skeleton className="h-4 w-[100px]" />
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground"><Skeleton className="h-4 w-[100px]" /></span>
-                <span className="text-sm">
-                  {" "}
-                  <Skeleton className="h-4 w-[100px]" />
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground"><Skeleton className="h-4 w-[100px]" /></span>
-                <span className="text-sm">
-                  {" "}
-                  <Skeleton className="h-4 w-[100px]" />
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground"><Skeleton className="h-4 w-[100px]" /></span>
-                <span className="text-sm">
-                  {" "}
-                  <Skeleton className="h-4 w-[100px]" />
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <Skeleton className="h-4 w-[100px]" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="cursor-pointer transition-shadow hover:shadow-md">
-          <CardHeader>
-            <CardTitle className="font-mono text-sm">
-              <Skeleton className="h-4 w-2/3" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground"><Skeleton className="h-4 w-[100px]" /></span>
-                <span className="font-semibold">
-                  {" "}
-                  <Skeleton className="h-4 w-[100px]" />
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground"><Skeleton className="h-4 w-[100px]" /></span>
-                <span className="text-sm">
-                  {" "}
-                  <Skeleton className="h-4 w-[100px]" />
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground"><Skeleton className="h-4 w-[100px]" /></span>
-                <span className="text-sm">
-                  {" "}
-                  <Skeleton className="h-4 w-[100px]" />
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground"><Skeleton className="h-4 w-[100px]" /></span>
-                <span className="text-sm">
-                  {" "}
-                  <Skeleton className="h-4 w-[100px]" />
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <Skeleton className="h-4 w-[100px]" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="cursor-pointer transition-shadow hover:shadow-md">
-          <CardHeader>
-            <CardTitle className="font-mono text-sm">
-              <Skeleton className="h-4 w-2/3" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground"><Skeleton className="h-4 w-[100px]" /></span>
-                <span className="font-semibold">
-                  {" "}
-                  <Skeleton className="h-4 w-[100px]" />
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground"><Skeleton className="h-4 w-[100px]" /></span>
-                <span className="text-sm">
-                  {" "}
-                  <Skeleton className="h-4 w-[100px]" />
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground"><Skeleton className="h-4 w-[100px]" /></span>
-                <span className="text-sm">
-                  {" "}
-                  <Skeleton className="h-4 w-[100px]" />
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground"><Skeleton className="h-4 w-[100px]" /></span>
-                <span className="text-sm">
-                  {" "}
-                  <Skeleton className="h-4 w-[100px]" />
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <Skeleton className="h-4 w-[100px]" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="space-y-4">
+          {[...Array(3)].map((_, i) => (
+            <TransactionSkeletonCard key={i} />
+          ))}
         </div>
       )}
 
@@ -213,7 +134,7 @@ export function TransactionList() {
                 ) : (
                   <p className="text-2xl font-bold">
                     {accountData?.balances.find(
-                      (balance) => balance.asset_type === "native",
+                      (balance: any) => balance.asset_type === "native",
                     )?.balance || "0"}{" "}
                     XLM
                   </p>
@@ -223,11 +144,11 @@ export function TransactionList() {
           </div>
 
           <p className="text-muted-foreground">
-            Showing {data.transactions.length} transactions
+            Showing {data.transactions.length} transactions (Page {currentPage})
           </p>
 
           <div className="grid gap-4">
-            {data.transactions.map((tx) => (
+            {data.transactions.map((tx: any) => (
               <Card
                 key={tx.id}
                 className="cursor-pointer transition-shadow hover:shadow-md"
@@ -245,7 +166,9 @@ export function TransactionList() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Time:</span>
-                      <span className="text-sm">{(tx.timestamp)}</span>
+                      <span className="text-sm">
+                        {new Date(tx.timestamp).toLocaleString()}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Fee:</span>
@@ -271,6 +194,37 @@ export function TransactionList() {
             ))}
           </div>
           
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious 
+                  onClick={handlePrevPage}
+                  className={!hasPrevPage ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+              
+              <PaginationItem>
+                <PaginationLink isActive>
+                  {currentPage}
+                </PaginationLink>
+              </PaginationItem>
+              
+              {hasNextPage && (
+                <>
+                  <PaginationItem>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                </>
+              )}
+              
+              <PaginationItem>
+                <PaginationNext 
+                  onClick={handleNextPage}
+                  className={!hasNextPage ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </>
       )}
     </div>
